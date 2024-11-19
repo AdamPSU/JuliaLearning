@@ -31,19 +31,35 @@ function generate_prime(n::Int)
     return findall(is_prime)  # `findall` returns the indices of `true` values
 end
 
-println(generate_prime(50))
-
 # # Function to generate the public and private key pair
-# function generate_keypair(p::Int, q::Int)::Tuple{Key, Key}
-#     """
-#     Description: Generates the public and private key pair
-#     if p and q are distinct primes. Otherwise, raise a value error
-#     Args: p, q (input integers)
-#     Returns: Keypair in the form of (Pub Key, Private Key)
-#     PubKey = (n,e) and Private Key = (n,d)
-#     """
-#     throw(NotImplementedError("generate_keypair not implemented"))
-# end
+function generate_keypair(p::Int, q::Int)::Tuple{Key, Key}
+    """
+    Description: Generates the public and private key pair
+    if p and q are distinct primes. Otherwise, raise a value error
+    Args: p, q (input integers)
+    Returns: Keypair in the form of (Pub Key, Private Key)
+    PubKey = (n,e) and Private Key = (n,d)
+    """
+
+    if p == q 
+        throw(ValueError("Values must be different"))
+    end 
+    
+    n = p * q 
+    phi = (p - 1) * (q - 1)
+    
+    e = 65537  # Choose e such that gcd(e, phi) == 1
+    d = mod_inverse(e, phi)  # Must define this later 
+    
+    public_key = (n, e)
+    private_key = (n, d)
+    
+    return public_key, private_key 
+
+    
+end
+
+
 
 # # Function to encrypt a message using RSA
 # function rsa_encrypt(m::String, pub_key::Key, blocksize::Int)::Int
