@@ -1,5 +1,20 @@
-# Type Definitions
-const Key = Tuple{Int, Int}
+# -----------------------------------------------------------------------
+# SP24 CMPSC 360 Extra Credit Assignment 2
+# RSA Implementation
+#
+# Name: <YOUR NAME>
+# ID: <YOUR PSU ID>
+#
+#
+# You cannot use any external/built-in libraries to help compute gcd
+# or modular inverse. You cannot use RSA, cryptography, or similar libs
+# for this assignment. You must write your own implementation for generating
+# large primes. You must write your own implementation for modular exponentiation
+# and modular inverse.
+#
+# You are allowed to use rand from the built-in Random library
+# -----------------------------------------------------------------------
+using Random
 
 # Function to generate an n-bit prime number
 function generate_prime(n::Int)
@@ -59,30 +74,73 @@ function generate_keypair(p::Int, q::Int)::Tuple{Key, Key}
     
 end
 
+function rsa_encrypt(m::String, pub_key::Key, blocksize::Int)::Int
+    """
+    Description: Encrypts the message with the given public
+    key using the RSA algorithm.
+    Args: m (input string)
+    Returns: c (encrypted cipher)
+    NOTE: You CANNOT use the built-in pow function (or any similar function)
+    here.
+    """
 
 
-# # Function to encrypt a message using RSA
-# function rsa_encrypt(m::String, pub_key::Key, blocksize::Int)::Int
-#     """
-#     Description: Encrypts the message with the given public
-#     key using the RSA algorithm.
-#     Args: m (input string)
-#     Returns: c (encrypted cipher)
-#     NOTE: You CANNOT use the built-in pow function (or any similar function)
-#     here.
-#     """
-#     throw(NotImplementedError("rsa_encrypt not implemented"))
-# end
 
-# # Function to decrypt a ciphertext using RSA
-# function rsa_decrypt(c::String, priv_key::Key, blocksize::Int)::Int
-#     """
-#     Description: Decrypts the ciphertext using the private key
-#     according to RSA algorithm
-#     Args: c (encrypted cipher string)
-#     Returns: m (decrypted message, a string)
-#     NOTE: You CANNOT use the built-in pow function (or any similar function)
-#     here.
-#     """
-#     throw(NotImplementedError("rsa_decrypt not implemented"))
-# end
+end
+
+function rsa_decrypt(c::String, priv_key::Key, blocksize::Int)::Int
+    """
+    Description: Decrypts the ciphertext using the private key
+    according to RSA algorithm
+    Args: c (encrypted cipher string)
+    Returns: m (decrypted message, a string)
+    NOTE: You CANNOT use the built-in pow function (or any similar function)
+    here.
+    """
+    throw(NotImplementedError())
+end
+
+function chunk_to_num(chunk::String, n::Int)::Int
+    """
+    Converts a chunk (substring) into a unique integer mod n^k.
+    
+    Args:
+        chunk: A string representing the substring.
+        n: The modulus base for the conversion.
+        
+    Returns:
+        An integer representation of the chunk.
+    """
+    k = length(chunk)
+    result = 0
+    for (i, char) in enumerate(reverse(chunk))
+        # Convert character to its ASCII value and apply positional weighting
+        result += (Int(char) % n) * (n ^ (i - 1))
+    end
+    return result
+end
+
+function num_to_chunk(num::Int, chunksize::Int, n::Int)::String
+    """
+    Converts a number back into a chunk (substring) using the given chunk size.
+    
+    Args:
+        num: The integer to convert.
+        chunksize: The length of the chunk (substring).
+        n: The modulus base for conversion.
+        
+    Returns:
+        A string representing the chunk.
+    """
+
+    chunk = ""
+    for _ in 1:chunksize
+        # Extract the last "digit" in base-n
+        remainder = num % n
+        # Convert back to a character
+        chunk = Char(remainder) * chunk
+        # Reduce the number
+        num ÷= n
+    end
+    return chunk
+end
