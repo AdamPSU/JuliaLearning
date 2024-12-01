@@ -1,77 +1,70 @@
-using Flux
-using Plots
-using Random 
+using CSV
+using DataFrames
+using Flux 
+using Statistics 
 
-# Generate sine wave data
-function generate_sine_wave(seq_length, num_samples)
-    x = range(0, num_samples * π, length=seq_length * num_samples)
-    y = sin.(x)
-    return y
-end
+salaries = CSV.read("C:\\Users\\admr0\\Downloads\\salaries.csv", DataFrame)
 
-# Parameters
-seq_length = 50  # Length of input sequence
-num_samples = 100  # Number of samples
+# for column in names(salaries)
+#     missing_count = sum(ismissing(salaries[:, column]))
+#     println("column: $column, missing: $missing_count")
+# end
 
-# Create data
-data = generate_sine_wave(seq_length, num_samples)
+job_titles = unique(salaries.job_title)
 
-# Visualize the sine wave
-plot(data[1:seq_length * 2], title="Sine Wave", label="Sine Wave", xlabel="Index", ylabel="Value")
+valid_titles = Set(["ML Engineer", "Machine Learning Engineer", "Machine Learning Scientist", "AI Engineer"])
+condition(row) = (row.job_title in valid_titles) && (row.company_location == "US")
+ml_salaries = filter(condition, salaries)
+select!(ml_salaries, :work_year, :experience_level, :salary_in_usd, :remote_ratio, :company_size)
 
+# grouped_by_xp = groupby(ml_salaries, :experience_level)
+# mean_salaries = combine(grouped_by_xp, :salary => mean)
+# rename!(mean_salaries, :salary_mean => :salary)
 
-# Create sequences and targets
-function create_sequences(data, seq_length)
-    X, y = [], []
+# mean_salaries.salary = Int64.(round.(mean_salaries.salary, digits=0))
 
-    for i in 1:(length(data) - seq_length)
-        push!(X, data[i:i+seq_length-1])
-        push!(y, data[i+seq_length])
-    end
+xp_encodings = Dict("EN" => 1, "MI" => 2, "SE" => 3, "EX" => 4)
+ml_salaries.experience_level = map(category -> xp_encodings[category], ml_salaries.experience_level)
 
-    return hcat(X...)', y
-end
+company_size_encodings = Dict("S" => 1, "M" => 2, "L" => 3)
+ml_salaries.company_size = map(category -> company_size_encodings[category], ml_salaries.company_size)
 
-X, y = create_sequences(data, seq_length)
+normalize(column) = (column .- mean(column)) ./ std(column)
 
-# Convert to Float32
-X = Float32.(X)
-y = Float32.(y)
-
-# Split into training and test sets
-train_size = Int(floor(0.8 * size(X, 1)))
-X_train, X_test = X[1:train_size, :], X[train_size+1:end, :]
-y_train, y_test = y[1:train_size], y[train_size+1:end]
-
-model = Chain(
-    LSTM(seq_length, 64),
-    Dense(64, 1)
+X = hcat(
+    normalize(ml_salaries.experience_level),
+    normalize(ml_salaries.company_size)
 )
 
-Flux.reset!(model)
+y = normalize(ml_salaries.salary_in_usd)
 
-loss(x, y) = Flux.mse(model(x'), y)
+num_rows = size(X)[1]
+train_size = Int(floor(0.8 * num_rows))
 
-opt = Descent(0.01)
+X_train = X[1:train_size, :]
+X_test = X[train_size+1:end, :]
 
-# Prepare training loop
-epochs = 100
-batch_size = 32
+y_train = y[1:train_size, :]
+y_test = y[train_size+1:end, :]
+ 
+model = Chain(
+    LSTM(2, 50),
+    Dense(50, 1), 
+    Flux.σ
+)
 
-# Training loop
-for epoch in 1:epochs
-    
-    for i in 1:batch_size:train_size 
-        batch_X = X_train[i:min(i+batch_size-1, train_size), :]
-        batch_y = y_train[i:min(i+batch_size-1, train_size)]
+#I run the model with: 
+params = Flux.params(model)
+opt = Adam()
+loss(model, X, y) = sum((model(X) .- y).^2)  # Mean Squared Error
 
-        gs = Flux.gradient(() -> loss(batch_X, batch_y), Flux.params(model))
-        Flux.Optimise.update!(opt, Flux.params(model), gs)
-    end
-    
-    # Print loss every 10 epochs
-    if epoch % 10 == 0
-        train_loss = loss(X_train', y_train)
-        println("Epoch $epoch, Loss: $train_loss")
-    end
-end
+epochs = 300
+train_data = [(X_train, y_train)]
+
+for epoch in 1:epochs 
+    Flux.train!(loss, params, train_data, opt)
+
+    println("Epoch = $epoch Training Loss = $train_loss")
+end 
+
+
